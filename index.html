@@ -1,68 +1,116 @@
+// ------------------- BACKEND (server.js) -------------------
+// This code should be saved in a file named server.js
+// To run this backend, you need Node.js and npm installed.
+// 1. Run `npm init -y` in your project folder.
+// 2. Run `npm install express node-fetch` to install dependencies.
+// 3. Run `node server.js` to start the server.
+
+const express = require('express');
+const fetch = require('node-fetch');
+const app = express();
+const port = 3000;
+
+app.use(express.json());
+app.use(express.static('public')); // Serve static files from a 'public' folder
+
+// API endpoint to handle requests to the Gemini API
+app.post('/api/explain', async (req, res) => {
+    const { prompt } = req.body;
+    const apiKey = ""; // IMPORTANT: Leave this empty for the environment to provide it.
+
+    if (!prompt) {
+        return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+    try {
+        const geminiResponse = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents: [{ role: "user", parts: [{ text: prompt }] }]
+            }),
+        });
+
+        if (!geminiResponse.ok) {
+            const errorText = await geminiResponse.text();
+            console.error('Gemini API Error:', errorText);
+            return res.status(geminiResponse.status).json({ error: `Gemini API responded with status: ${geminiResponse.status}` });
+        }
+
+        const data = await geminiResponse.json();
+        res.json(data);
+
+    } catch (error) {
+        console.error('Server Error:', error);
+        res.status(500).json({ error: 'Failed to fetch from Gemini API' });
+    }
+});
+
+app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+});
+
+
+// ------------------- FRONTEND (public/index.html) -------------------
+// This HTML file should be placed inside a folder named 'public'.
+
+/*
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCB Medical College Redevelopment: An AI-Powered Infographic</title>
+    <title>SCB Redevelopment: A Civil Engineering Deep Dive</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
+            background-color: #f0f4f8; /* Lighter blue-gray background */
         }
-        .chart-container {
+        .section-title {
             position: relative;
-            width: 100%;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-            height: 300px;
-            max-height: 400px;
+            padding-bottom: 0.75rem;
         }
-        @media (min-width: 768px) {
-            .chart-container {
-                height: 350px;
-            }
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background-color: #3b82f6; /* Brighter blue */
+            border-radius: 2px;
         }
-        .flowchart-step {
-            min-width: 120px;
-            text-align: center;
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem;
-            background-color: #FFFFFF;
-            border: 1px solid #E5E7EB;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            flex-shrink: 0;
-        }
-        .flowchart-arrow {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            color: #6B7280;
-            margin: 0 0.5rem;
-        }
-        .recommendation-card {
+        .tech-card {
             background-color: white;
-            border-left: 5px solid #118AB2;
+            border: 1px solid #e5e7eb;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-        .recommendation-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        .tech-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .spec-item {
+            border-left: 4px solid #60a5fa; /* Lighter blue for spec items */
+            padding-left: 1rem;
+            margin-bottom: 1rem;
         }
         .gemini-btn {
             transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.1);
         }
         .gemini-btn:hover {
             transform: scale(1.05);
-            box-shadow: 0 0 20px rgba(6, 214, 160, 0.5);
+            box-shadow: 0 10px 15px rgba(59, 130, 246, 0.2);
         }
         .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #06D6A0;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #3b82f6;
             border-radius: 50%;
             width: 30px;
             height: 30px;
@@ -75,355 +123,179 @@
     </style>
 </head>
 <body class="text-gray-800">
-    <!-- Energetic & Playful Palette: #FF6B6B, #FFD166, #06D6A0, #118AB2, #073B4C -->
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+    <div class="container mx-auto p-4 md:p-8 max-w-6xl">
 
-        <header class="text-center mb-12">
-            <h1 class="text-4xl md:text-5xl font-extrabold text-[#073B4C] mb-2">SCB Medical College Redevelopment</h1>
-            <p class="text-xl md:text-2xl text-[#118AB2]">An AI-Powered Infographic</p>
+        <header class="text-center mb-16">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-gray-900 mb-3">SCB Medical College Redevelopment</h1>
+            <p class="text-xl md:text-2xl text-blue-600 font-medium">An AI-Enhanced Civil Engineering Overview</p>
         </header>
 
-        <section class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 class="text-2xl font-bold text-[#073B4C] mb-4 text-center">A Vision for World-Class Healthcare</h2>
-            <p class="text-lg text-gray-600 mb-6 text-center max-w-3xl mx-auto">The state of Odisha has embarked on a monumental initiative to transform the historic SCB Medical College into an "AIIMS++" category facility, creating a comprehensive healthcare ecosystem for the region.</p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-                <div class="bg-blue-50 p-6 rounded-lg">
-                    <div class="text-5xl font-extrabold text-[#118AB2]">₹4474 Cr</div>
-                    <p class="text-lg font-medium text-gray-700 mt-2">Total Project Budget</p>
-                </div>
-                <div class="bg-green-50 p-6 rounded-lg">
-                    <div class="text-5xl font-extrabold text-[#06D6A0]">4,200+</div>
-                    <p class="text-lg font-medium text-gray-700 mt-2">New Patient Beds</p>
-                </div>
-                <div class="bg-yellow-50 p-6 rounded-lg">
-                    <div class="text-5xl font-extrabold text-[#FFD166]">2,916</div>
-                    <p class="text-lg font-medium text-gray-700 mt-2">Total Residential & Hostel Units</p>
-                </div>
-            </div>
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 section-title">Introduction: A Landmark in Modern Engineering</h2>
+            <p class="text-lg text-gray-700 leading-relaxed">
+                The SCB Medical College redevelopment project is a monumental undertaking in public infrastructure, serving as a prime case study for advanced civil engineering in India. This overview focuses on the core civil engineering disciplines demonstrated in the project, from the deep foundations supporting the high-rise structures to the innovative composite systems and rapid construction technologies employed. The project showcases a sophisticated approach to structural design, material science, and digital construction management, offering valuable insights for engineering professionals.
+            </p>
         </section>
 
-        <section class="mb-8">
-            <h2 class="text-2xl font-bold text-[#073B4C] mb-6 text-center">The Reality: A Project in Distress</h2>
-            <p class="text-lg text-gray-600 mb-6 text-center max-w-3xl mx-auto">Despite the ambitious vision and use of modern technology, the project faces a critical "technology-execution gap," resulting in severe schedule delays that jeopardize its 2025 completion goal.</p>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="bg-white rounded-lg shadow-md p-6">
-                    <h3 class="text-xl font-bold text-center text-[#073B4C] mb-4">Clinical Package Backlog</h3>
-                    <div class="chart-container h-64 md:h-80">
-                        <canvas id="clinicalBacklogChart"></canvas>
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 section-title">Foundation Engineering: The Bedrock of a Megastructure</h2>
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <p class="text-lg text-gray-700 mb-8">The entire super-structure rests on a robust deep foundation system, meticulously designed to handle the immense loads of the high-rise clinical and residential blocks. The scale of the foundation work underscores the project's magnitude.</p>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-2xl font-semibold text-blue-800 mb-4">Key Specifications</h3>
+                        <ul class="space-y-4 text-gray-700">
+                            <li class="spec-item">
+                                <strong class="block text-gray-900">Total Piles:</strong> Approximately 3,851 deep piles provide the primary support.
+                            </li>
+                            <li class="spec-item">
+                                <strong class="block text-gray-900">Pile Diameters:</strong> A combination of 900mm and 600mm diameter piles are used, specified according to structural load requirements.
+                            </li>
+                            <li class="spec-item">
+                                <strong class="block text-gray-900">Foundation Type:</strong> The system utilizes stitch pile caps and a substantial raft foundation to unify the piles and effectively distribute the building's weight.
+                            </li>
+                        </ul>
                     </div>
-                    <p class="text-center text-gray-600 mt-4">The high-complexity hospital build by L&T has completed only <strong>40.41%</strong> of its planned work.</p>
-                </div>
-                <div class="bg-white rounded-lg shadow-md p-6">
-                    <h3 class="text-xl font-bold text-center text-[#073B4C] mb-4">Residential Package Backlog</h3>
-                    <div class="chart-container h-64 md:h-80">
-                        <canvas id="residentialBacklogChart"></canvas>
+                    <div>
+                        <h3 class="text-2xl font-semibold text-blue-800 mb-4">Quality Assurance in Foundations</h3>
+                        <p class="text-gray-700">A critical component of the quality control process is the rigorous testing of the foundation elements. The project report highlights the importance of the **lateral pile load test**, a crucial procedure to verify that the piles can withstand horizontal forces (like wind and seismic loads), ensuring the long-term stability and safety of the entire structure.</p>
                     </div>
-                    <p class="text-center text-gray-600 mt-4">The mass housing project by NCC is also critically behind at <strong>45.96%</strong> complete, despite using speed-focused construction methods.</p>
                 </div>
             </div>
         </section>
 
-        <section class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 class="text-2xl font-bold text-[#073B4C] mb-4 text-center">Project S-Curve: A Narrative of Deceleration</h2>
-            <p class="text-lg text-gray-600 mb-6 text-center max-w-3xl mx-auto">The project's momentum has slowed significantly. The rate of actual progress has flattened, making the December 2025 forecast highly unlikely without drastic intervention to dramatically increase work velocity.</p>
-            <div class="chart-container h-96 max-w-4xl">
-                <canvas id="sCurveChart"></canvas>
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 section-title">Superstructure: A Hybrid Approach to Strength and Speed</h2>
+            <p class="text-lg text-gray-700 mb-6 leading-relaxed">The clinical blocks feature a state-of-the-art **composite structure**, a hybrid design that combines steel and concrete to optimize performance, accelerate construction, and achieve complex architectural goals.</p>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="tech-card p-6 rounded-xl shadow-lg">
+                    <h3 class="text-2xl font-semibold text-blue-800 mb-3">Concrete-Filled Tube (CFT) Columns</h3>
+                    <p class="text-gray-700">This advanced system involves filling hollow steel tubes with high-strength concrete. The steel tube acts as permanent formwork and provides confinement, increasing the concrete's strength, while the concrete core prevents the steel from buckling. This synergy results in superior load-bearing capacity and seismic resistance, while significantly speeding up the construction cycle by eliminating traditional rebar caging and shuttering.</p>
+                </div>
+                <div class="tech-card p-6 rounded-xl shadow-lg">
+                    <h3 class="text-2xl font-semibold text-blue-800 mb-3">Composite Slabs with Metal Decking</h3>
+                    <p class="text-gray-700">The flooring system uses **TR60+ grade metal deck sheets** (1mm thick) as a permanent base for a 150mm concrete slab. Shear studs bond the steel and concrete, creating a monolithic and highly efficient floor diaphragm. This method reduces the overall structural dead load and accelerates the floor construction process, allowing multiple floors to be worked on simultaneously.</p>
+                </div>
+            </div>
+             <div class="mt-8 bg-white p-6 rounded-xl shadow-lg">
+                <h3 class="text-2xl font-semibold text-blue-800 mb-3">Engineering for Open Spaces: Transfer Girders</h3>
+                <p class="text-gray-700">To create the large, column-free spans necessary for functional areas like OPDs and emergency blocks, the design incorporates massive, heavily reinforced **transfer girders**. A notable example cited in the report is a girder spanning an impressive **34.5 meters**, showcasing the project's capacity to engineer solutions for complex architectural and functional requirements.</p>
             </div>
         </section>
 
-        <section class="mb-8">
-            <h2 class="text-2xl font-bold text-[#073B4C] mb-6 text-center">Unpacking the Bottlenecks: Top Risk Categories</h2>
-            <p class="text-lg text-gray-600 mb-6 text-center max-w-3xl mx-auto">The delays are not random. They stem from fundamental issues in the earliest stages of the project, indicating that foundational decisions were not resolved before construction began, leading to a cascade of rework and disputes.</p>
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="chart-container h-96">
-                    <canvas id="riskCategoriesChart"></canvas>
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 section-title">✨ AI-Powered Technical Explainer</h2>
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <p class="text-lg text-gray-700 mb-6">Select a civil engineering topic from this project and use the Gemini API to generate a detailed technical explanation. This tool can help clarify complex concepts and their practical applications on-site.</p>
+                <div class="flex flex-col md:flex-row justify-center items-center gap-4 mb-6">
+                    <select id="techTopic" class="p-3 border border-gray-300 rounded-lg shadow-sm w-full md:w-auto focus:ring-2 focus:ring-blue-500">
+                        <option value="Concrete-Filled Tube (CFT) Columns">Explain CFT Columns</option>
+                        <option value="MIVAN Formwork System">Explain MIVAN Formwork</option>
+                        <option value="Composite Slabs with Metal Decking">Explain Composite Slabs</option>
+                        <option value="Lateral Pile Load Test">Explain Lateral Pile Load Test</option>
+                    </select>
+                    <button id="explainTechBtn" class="gemini-btn bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg w-full md:w-auto">
+                        Generate Explanation
+                    </button>
                 </div>
-            </div>
-        </section>
-
-        <section class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 class="text-2xl font-bold text-[#073B4C] mb-6 text-center">✨ AI-Powered Project Analysis</h2>
-            <p class="text-lg text-gray-600 mb-6 text-center max-w-3xl mx-auto">Click the button below to use the Gemini API to generate a detailed analysis of the project's primary challenges based on the data presented in this infographic.</p>
-            <div class="text-center mb-6">
-                <button id="analyzeRisksBtn" class="gemini-btn bg-[#06D6A0] text-[#073B4C] font-bold py-3 px-6 rounded-lg shadow-lg">
-                    Analyze Project Challenges
-                </button>
-            </div>
-            <div id="riskAnalysisResult" class="p-4 bg-gray-50 rounded-lg min-h-[100px] text-gray-700">
-                <div class="flex justify-center items-center h-full">
-                    <p>AI analysis will appear here...</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 class="text-2xl font-bold text-[#073B4C] mb-6 text-center">Quality Management Under Strain</h2>
-            <p class="text-lg text-gray-600 mb-6 text-center max-w-3xl mx-auto">The quality control process, managed by AECOM, is facing significant challenges. While many issues are raised, a substantial number remain unresolved, including critical structural and material defects that could impact long-term safety and durability.</p>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="chart-container h-80">
-                    <canvas id="qualityIssuesChart"></canvas>
-                </div>
-                <div>
-                    <h4 class="text-lg font-bold text-[#073B4C] mb-2">Critical Open Issues:</h4>
-                    <ul class="list-disc list-inside space-y-2 text-gray-700">
-                        <li><strong class="text-red-600">Improper Pile Load Test:</strong> A potential defect in the deep foundation system of Clinical Block CN-03.</li>
-                        <li><strong class="text-red-600">Uncertified Road Materials:</strong> Use of materials without proper Material Test Certificates (MTCs), a breakdown in quality control.</li>
-                        <li><strong class="text-yellow-600">Façade Stability Concerns:</strong> Changes to Hilti stone clamps are affecting the stability of the building's exterior.</li>
-                        <li><strong class="text-yellow-600">Sky Bridge Protocol:</strong> Lack of an approved protocol for constructing the critical sky bridges connecting buildings.</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-        
-        <section class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 class="text-2xl font-bold text-[#073B4C] mb-6 text-center">The "Smart Hospital" Vision at Risk</h2>
-            <p class="text-lg text-gray-600 mb-6 text-center max-w-3xl mx-auto">A key project goal is the creation of a digitally integrated "smart hospital." However, delays in finalizing interior MEP components threaten to compromise or force the de-scoping of these critical, efficiency-driving systems.</p>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                <div>
-                    <h4 class="text-lg font-bold text-[#073B4C] mb-2">Key Automated Systems:</h4>
-                    <ul class="list-disc list-inside space-y-2 text-gray-700">
-                        <li><strong>Pneumatic Tube System:</strong> 107 stations for rapid transport of lab samples, records, and medications.</li>
-                        <li><strong>Automated Waste & Laundry System (AWLS):</strong> Improves hygiene and reduces manual labor for waste and linen transport.</li>
-                        <li><strong>Building Management System (BMS):</strong> Centralized control of MEP systems for energy efficiency.</li>
-                        <li><strong>Asset Management System:</strong> Real-time tracking of critical medical equipment.</li>
-                    </ul>
-                </div>
-                <div class="chart-container h-80">
-                     <canvas id="smartHospitalRiskChart"></canvas>
-                </div>
-            </div>
-        </section>
-        
-        <section class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 class="text-2xl font-bold text-[#073B4C] mb-6 text-center">✨ Generate Strategic Scenarios</h2>
-            <p class="text-lg text-gray-600 mb-6 text-center max-w-3xl mx-auto">Select a strategic focus and use the Gemini API to generate tailored action plans for the project. This tool can help brainstorm strategies to move the project forward.</p>
-            <div class="flex flex-col md:flex-row justify-center items-center gap-4 mb-6">
-                <select id="recoveryFocus" class="p-3 border border-gray-300 rounded-lg shadow-sm w-full md:w-auto">
-                    <option value="Fast-Track Construction">Focus on Fast-Tracking Construction</option>
-                    <option value="Budget Control and Cost Savings">Focus on Budget Control & Cost Savings</option>
-                    <option value="Stakeholder Alignment">Focus on Stakeholder Alignment</option>
-                    <option value="Quality Assurance">Focus on Quality Assurance</option>
-                </select>
-                <button id="generateScenarioBtn" class="gemini-btn bg-[#118AB2] text-white font-bold py-3 px-6 rounded-lg shadow-lg w-full md:w-auto">
-                    Generate Scenario
-                </button>
-            </div>
-            <div id="recoveryScenarioResult" class="p-4 bg-gray-50 rounded-lg min-h-[100px] text-gray-700">
-                <div class="flex justify-center items-center h-full">
-                    <p>AI-generated strategic scenario will appear here...</p>
+                <div id="techExplanationResult" class="p-6 bg-gray-50 rounded-lg min-h-[150px] text-gray-700 border">
+                    <div class="flex justify-center items-center h-full">
+                        <p>AI-generated technical explanation will appear here...</p>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <footer class="text-center mt-12 py-6 border-t">
-            <p class="text-gray-600">Infographic based on the internship report by Rohan Kar. AI features powered by Gemini.</p>
+        <section class="mb-12">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 section-title">Materials and Specifications</h2>
+             <div class="bg-white p-8 rounded-xl shadow-lg">
+                <p class="text-lg text-gray-700 mb-6">The project specifies a range of high-quality and sustainable materials to meet its "world-class" aspirations and its goal of achieving an **IGBC Green Building Gold Rating**.</p>
+                <ul class="space-y-4 text-gray-700">
+                    <li class="spec-item"><strong class="text-gray-900">Façade Materials:</strong> The building exterior is architecturally complex, featuring 18 different wall types. Key materials include premium **granite** and **terracotta cladding**, extensive glazing, and Aluminum Composite Panel (ACP) canopies.</li>
+                    <li class="spec-item"><strong class="text-gray-900">Interior Flooring:</strong> High-traffic public areas utilize durable **granite flooring**, while specialized zones like laboratories are fitted with **conductive vinyl flooring** to dissipate static electricity.</li>
+                    <li class="spec-item"><strong class="text-gray-900">Sustainable Materials:</strong> The residential buildings use **low VOC (Volatile Organic Compound) paints** for improved indoor air quality and **UPVC windows** for enhanced thermal and acoustic insulation, contributing to the green building rating.</li>
+                </ul>
+            </div>
+        </section>
+
+        <footer class="text-center mt-16 py-8 border-t border-gray-200">
+            <p class="text-gray-600">This technical overview is based on the internship report by Rohan Kar. AI features powered by Gemini.</p>
         </footer>
-
     </div>
 
     <script>
-        const wrapLabel = (label) => {
-            if (label.length <= 16) { return label; }
-            const words = label.split(' ');
-            const lines = [];
-            let currentLine = '';
-            words.forEach(word => {
-                if ((currentLine + word).length > 16) {
-                    lines.push(currentLine.trim());
-                    currentLine = '';
-                }
-                currentLine += word + ' ';
-            });
-            lines.push(currentLine.trim());
-            return lines;
-        };
+        const explainTechBtn = document.getElementById('explainTechBtn');
+        const techTopic = document.getElementById('techTopic');
+        const techExplanationResult = document.getElementById('techExplanationResult');
 
-        const tooltipTitleCallback = (tooltipItems) => {
-            const item = tooltipItems[0];
-            let label = item.chart.data.labels[item.dataIndex];
-            return Array.isArray(label) ? label.join(' ') : label;
-        };
-        
-        const defaultChartOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: { callbacks: { title: tooltipTitleCallback } }
-            }
-        };
-        
-        const energeticPalette = {
-            red: '#FF6B6B', yellow: '#FFD166', green: '#06D6A0',
-            blue: '#118AB2', darkBlue: '#073B4C', gray: '#e5e7eb'
-        };
-
-        new Chart(document.getElementById('clinicalBacklogChart'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Work Completed', 'Schedule Backlog'],
-                datasets: [{ data: [40.41, 59.59], backgroundColor: [energeticPalette.green, energeticPalette.red], borderColor: '#ffffff', borderWidth: 4 }]
-            },
-            options: { ...defaultChartOptions, cutout: '70%', plugins: { ...defaultChartOptions.plugins, legend: { display: false }, title: { display: true, text: '59.6% Backlog', font: { size: 24, weight: 'bold' }, color: energeticPalette.red, position: 'bottom', padding: { top: -60 } } } }
-        });
-
-        new Chart(document.getElementById('residentialBacklogChart'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Work Completed', 'Schedule Backlog'],
-                datasets: [{ data: [45.96, 54.04], backgroundColor: [energeticPalette.green, energeticPalette.red], borderColor: '#ffffff', borderWidth: 4 }]
-            },
-            options: { ...defaultChartOptions, cutout: '70%', plugins: { ...defaultChartOptions.plugins, legend: { display: false }, title: { display: true, text: '54.04% Backlog', font: { size: 24, weight: 'bold' }, color: energeticPalette.red, position: 'bottom', padding: { top: -60 } } } }
-        });
-
-        const riskLabels = ['Planning & Design', 'Structural', 'MEP Finalization', 'Façade Stability', 'Mock-up Approvals', 'Quality Control'];
-        new Chart(document.getElementById('riskCategoriesChart'), {
-            type: 'bar',
-            data: {
-                labels: riskLabels.map(wrapLabel),
-                datasets: [{ label: 'Impact Score', data: [95, 90, 85, 80, 75, 70], backgroundColor: [energeticPalette.red, energeticPalette.red, energeticPalette.yellow, energeticPalette.yellow, energeticPalette.yellow, energeticPalette.yellow], borderColor: energeticPalette.darkBlue, borderWidth: 1 }]
-            },
-            options: { ...defaultChartOptions, indexAxis: 'y', scales: { x: { beginAtZero: true, title: { display: true, text: 'Severity of Impact on Schedule' } } }, plugins: { ...defaultChartOptions.plugins, legend: { display: false } } }
-        });
-
-        new Chart(document.getElementById('sCurveChart'), {
-            type: 'line',
-            data: {
-                labels: ['Jan 22', 'Jul 22', 'Jan 23', 'Jul 23', 'Jan 24', 'Jul 24', 'Jan 25', 'Dec 25'],
-                datasets: [
-                    { label: 'Planned Progress', data: [0, 15, 35, 60, 85, 100, 100, 100], borderColor: energeticPalette.blue, fill: false, tension: 0.4, borderDash: [5, 5] },
-                    { label: 'Actual Progress', data: [0, 5, 15, 30, 40.4, null, null, null], borderColor: energeticPalette.red, backgroundColor: 'rgba(255, 107, 107, 0.2)', fill: true, tension: 0.4 },
-                    { label: 'Forecasted Progress', data: [null, null, null, 30, 40.4, 55, 75, 100], borderColor: energeticPalette.yellow, fill: false, tension: 0.4 }
-                ]
-            },
-            options: { ...defaultChartOptions, scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '% Completion' } } } }
-        });
-        
-        new Chart(document.getElementById('qualityIssuesChart'), {
-            type: 'bar',
-            data: {
-                labels: ['Clinical Package', 'Residential Package'],
-                datasets: [
-                    { label: 'Issues Resolved', data: [35, 20], backgroundColor: energeticPalette.green },
-                    { label: 'Issues Open', data: [27, 10], backgroundColor: energeticPalette.red }
-                ]
-            },
-            options: { ...defaultChartOptions, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Number of Quality Issues' } } } }
-        });
-        
-        new Chart(document.getElementById('smartHospitalRiskChart'), {
-            type: 'radar',
-            data: {
-                labels: ['Pneumatic Tubes', 'AWLS', 'BMS', 'Asset Tracking', 'Queue Management'],
-                datasets: [{
-                    label: 'Risk of De-Scoping / Compromise',
-                    data: [9, 8, 6, 7, 5],
-                    fill: true,
-                    backgroundColor: 'rgba(255, 107, 107, 0.2)',
-                    borderColor: energeticPalette.red,
-                    pointBackgroundColor: energeticPalette.red,
-                }]
-            },
-            options: { ...defaultChartOptions, scales: { r: { beginAtZero: true, max: 10, ticks: { display: false } } }, plugins: { ...defaultChartOptions.plugins, legend: { display: false } } }
-        });
-
-        // Gemini API Integration
-        const analyzeRisksBtn = document.getElementById('analyzeRisksBtn');
-        const riskAnalysisResult = document.getElementById('riskAnalysisResult');
-        const generateScenarioBtn = document.getElementById('generateScenarioBtn');
-        const recoveryScenarioResult = document.getElementById('recoveryScenarioResult');
-        const recoveryFocus = document.getElementById('recoveryFocus');
-
-        const projectDataContext = `
-            Project: SCB Medical College Redevelopment.
-            Vision: Transform into an "AIIMS++" facility.
-            Budget: ₹4474 Cr.
-            Status: Project faces significant schedule challenges.
-            Clinical Package (L&T): 59.6% schedule backlog.
-            Residential Package (NCC): 54.04% schedule backlog.
-            Primary Challenge Categories: 'Planning & Design' and 'Structural' issues are the root cause of delays.
-            Quality Issues: 37 unresolved issues, including critical ones like improper pile load tests and uncertified materials.
-            Technology Opportunity: The 'Smart Hospital' vision requires careful management due to MEP finalization delays.
+        const projectCivilContext = `
+            The SCB Medical College redevelopment project in Cuttack, India, is a large-scale civil engineering endeavor. 
+            Key features include:
+            - Foundations: 3,851 deep piles (900mm & 600mm dia) with pile caps and raft foundation. Lateral pile load tests are a key QA measure.
+            - Superstructure (Clinical): A composite structure using Concrete-Filled Tube (CFT) columns and composite slabs with TR60+ metal decking. 34.5m transfer girders are used for large spans.
+            - Superstructure (Residential): MIVAN aluminum formwork system for monolithic casting of shear walls and slabs, targeting a 15-18 day slab cycle.
+            - Materials: Granite, terracotta cladding, low VOC paints, UPVC windows, aiming for IGBC Gold rating.
         `;
 
-        const callGeminiAPI = async (prompt, resultElement, buttonElement) => {
+        const callBackendAPI = async (prompt, resultElement, buttonElement) => {
             const originalButtonText = buttonElement.innerHTML;
             buttonElement.innerHTML = '<div class="loader mx-auto"></div>';
             buttonElement.disabled = true;
             resultElement.innerHTML = '<div class="flex justify-center items-center h-full"><div class="loader"></div></div>';
 
-            let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-            const payload = { contents: chatHistory };
-            const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
             try {
-                const response = await fetch(apiUrl, {
+                const response = await fetch('/api/explain', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ prompt: prompt })
                 });
-                
+
                 if (!response.ok) {
-                    const errorBody = await response.text();
-                    console.error("API Error Response:", errorBody);
-                    resultElement.innerHTML = `<strong class="text-red-600">API Error:</strong> Received status ${response.status}. Check the console for more details.`;
+                    const errorData = await response.json();
+                    console.error("Backend Error:", errorData);
+                    resultElement.innerHTML = `<strong class="text-red-600">Error:</strong> Failed to get a response from the server. Status: ${response.status}.`;
                     return;
                 }
-
+                
                 const result = await response.json();
-                console.log("API Response:", result);
+                console.log("API Response from backend:", result);
 
                 if (result.candidates && result.candidates.length > 0 &&
                     result.candidates[0].content && result.candidates[0].content.parts &&
                     result.candidates[0].content.parts.length > 0) {
                     const text = result.candidates[0].content.parts[0].text;
-                    resultElement.innerHTML = text.replace(/\n/g, '<br>');
+                    resultElement.innerHTML = text.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
                 } else if (result.promptFeedback) {
-                     resultElement.innerHTML = `<strong class="text-red-600">Error:</strong> The request was blocked by the API's safety filters. <br>Reason: ${result.promptFeedback.blockReason || 'Not specified'}. <br>Please try rephrasing your request.`;
+                     resultElement.innerHTML = `<strong class="text-red-500">Error:</strong> The request was blocked. <br>Reason: ${result.promptFeedback.blockReason || 'Safety filters'}.`;
                 } else if (result.error) {
-                    resultElement.innerHTML = `<strong class="text-red-600">API Error:</strong> ${result.error.message}`;
-                }
-                else {
-                    resultElement.textContent = 'Error: Could not retrieve analysis. The response from the AI was empty or malformed.';
+                    resultElement.innerHTML = `<strong class="text-red-500">API Error:</strong> ${result.error.message}`;
+                } else {
+                    resultElement.textContent = 'Error: The response from the AI was empty or malformed.';
                 }
             } catch (error) {
-                console.error("API call failed:", error);
-                resultElement.textContent = 'An error occurred while contacting the AI model. Please check the console for details.';
+                console.error("Frontend call failed:", error);
+                resultElement.textContent = 'An error occurred while contacting the server. Please check the console for details.';
             } finally {
                 buttonElement.innerHTML = originalButtonText;
                 buttonElement.disabled = false;
             }
         };
 
-        analyzeRisksBtn.addEventListener('click', () => {
+        explainTechBtn.addEventListener('click', () => {
+            const selectedTopic = techTopic.value;
             const prompt = `
-                Based on the following project data, provide a concise but detailed analysis of project challenges. 
-                Focus on the cascading effects of the primary issues. Structure your response in three paragraphs:
-                1.  **Core Challenges:** Explain how the 'Planning & Design' and 'Structural' issues are the root cause.
-                2.  **Execution Hurdles:** Describe how these core challenges impact the schedule and quality control.
-                3.  **Strategic Considerations:** Analyze the long-term impact on the 'Smart Hospital' vision and overall project goals.
+                As a civil engineering expert, provide a detailed technical explanation of the "${selectedTopic}" based on its application in the SCB Medical College project.
                 
-                Project Data: ${projectDataContext}
-            `;
-            callGeminiAPI(prompt, riskAnalysisResult, analyzeRisksBtn);
-        });
+                Use the following context for your explanation. Structure your response with these headings and use bold formatting for the headings:
+                - **Engineering Principle:** (Explain the core concept behind the technology/test).
+                - **Application at SCB Project:** (Describe how it was specifically used in this project based on the context).
+                - **Key Advantages:** (List 2-3 main benefits of using this method in bullet points).
 
-        generateScenarioBtn.addEventListener('click', () => {
-            const selectedFocus = recoveryFocus.value;
-            const prompt = `
-                You are a project strategy consultant. Based on the following project data, generate a high-level, actionable strategic plan.
-                The primary strategic focus for this plan should be: "${selectedFocus}".
-                
-                Structure your response with the following headings:
-                - **Objective:** (A one-sentence goal based on the chosen focus).
-                - **Key Initiatives:** (3-4 bullet points with specific, actionable steps).
-                - **Potential Considerations:** (Briefly mention what might need to be balanced to achieve this focus).
-
-                Project Data: ${projectDataContext}
+                Context: ${projectCivilContext}
             `;
-            callGeminiAPI(prompt, recoveryScenarioResult, generateScenarioBtn);
+            callBackendAPI(prompt, techExplanationResult, explainTechBtn);
         });
     </script>
 </body>
 </html>
+*/
