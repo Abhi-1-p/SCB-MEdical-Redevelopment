@@ -364,12 +364,21 @@
                     body: JSON.stringify(payload)
                 });
                 const result = await response.json();
+                
+                // Enhanced error handling
+                console.log("API Response:", result); // Log the full response for debugging
+
                 if (result.candidates && result.candidates.length > 0 &&
                     result.candidates[0].content && result.candidates[0].content.parts &&
                     result.candidates[0].content.parts.length > 0) {
                     const text = result.candidates[0].content.parts[0].text;
                     resultElement.innerHTML = text.replace(/\n/g, '<br>');
-                } else {
+                } else if (result.promptFeedback) {
+                     resultElement.innerHTML = `<strong class="text-red-600">Error:</strong> The request was blocked by the API's safety filters. <br>Reason: ${result.promptFeedback.blockReason || 'Not specified'}. <br>Please try rephrasing your request.`;
+                } else if (result.error) {
+                    resultElement.innerHTML = `<strong class="text-red-600">API Error:</strong> ${result.error.message}`;
+                }
+                else {
                     resultElement.textContent = 'Error: Could not retrieve analysis. The response from the AI was empty or malformed.';
                 }
             } catch (error) {
