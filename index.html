@@ -1,3 +1,64 @@
+// ------------------- BACKEND (server.js) -------------------
+// This code should be saved in a file named server.js
+// To run this backend, you need Node.js and npm installed.
+// 1. Run `npm init -y` in your project folder.
+// 2. Run `npm install express node-fetch` to install dependencies.
+// 3. Run `node server.js` to start the server.
+
+const express = require('express');
+const fetch = require('node-fetch');
+const app = express();
+const port = 3000;
+
+app.use(express.json());
+app.use(express.static('public')); // Serve static files from a 'public' folder
+
+// API endpoint to handle requests to the Gemini API
+app.post('/api/explain', async (req, res) => {
+    const { prompt } = req.body;
+    const apiKey = ""; // IMPORTANT: Leave this empty for the environment to provide it.
+
+    if (!prompt) {
+        return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+    try {
+        const geminiResponse = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents: [{ role: "user", parts: [{ text: prompt }] }]
+            }),
+        });
+
+        if (!geminiResponse.ok) {
+            const errorText = await geminiResponse.text();
+            console.error('Gemini API Error:', errorText);
+            return res.status(geminiResponse.status).json({ error: `Gemini API responded with status: ${geminiResponse.status}` });
+        }
+
+        const data = await geminiResponse.json();
+        res.json(data);
+
+    } catch (error) {
+        console.error('Server Error:', error);
+        res.status(500).json({ error: 'Failed to fetch from Gemini API' });
+    }
+});
+
+app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+});
+
+
+// ------------------- FRONTEND (public/index.html) -------------------
+// This HTML file should be placed inside a folder named 'public'.
+
+/*
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -183,39 +244,34 @@
             - Materials: Granite, terracotta cladding, low VOC paints, UPVC windows, aiming for IGBC Gold rating.
         `;
 
-        const callGeminiAPI = async (prompt, resultElement, buttonElement) => {
+        const callBackendAPI = async (prompt, resultElement, buttonElement) => {
             const originalButtonText = buttonElement.innerHTML;
             buttonElement.innerHTML = '<div class="loader mx-auto"></div>';
             buttonElement.disabled = true;
             resultElement.innerHTML = '<div class="flex justify-center items-center h-full"><div class="loader"></div></div>';
 
-            let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-            const payload = { contents: chatHistory };
-            const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
             try {
-                const response = await fetch(apiUrl, {
+                const response = await fetch('/api/explain', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ prompt: prompt })
                 });
 
                 if (!response.ok) {
-                    const errorBody = await response.text();
-                    console.error("API Error Response:", errorBody);
-                    resultElement.innerHTML = `<strong class="text-red-600">API Error:</strong> Received status ${response.status}. Check the console for more details.`;
+                    const errorData = await response.json();
+                    console.error("Backend Error:", errorData);
+                    resultElement.innerHTML = `<strong class="text-red-600">Error:</strong> Failed to get a response from the server. Status: ${response.status}.`;
                     return;
                 }
                 
                 const result = await response.json();
-                console.log("API Response:", result);
+                console.log("API Response from backend:", result);
 
                 if (result.candidates && result.candidates.length > 0 &&
                     result.candidates[0].content && result.candidates[0].content.parts &&
                     result.candidates[0].content.parts.length > 0) {
                     const text = result.candidates[0].content.parts[0].text;
-                    resultElement.innerHTML = text.replace(/\n/g, '<br>');
+                    resultElement.innerHTML = text.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
                 } else if (result.promptFeedback) {
                      resultElement.innerHTML = `<strong class="text-red-500">Error:</strong> The request was blocked. <br>Reason: ${result.promptFeedback.blockReason || 'Safety filters'}.`;
                 } else if (result.error) {
@@ -224,8 +280,8 @@
                     resultElement.textContent = 'Error: The response from the AI was empty or malformed.';
                 }
             } catch (error) {
-                console.error("API call failed:", error);
-                resultElement.textContent = 'An error occurred while contacting the AI model. Please check the console for details.';
+                console.error("Frontend call failed:", error);
+                resultElement.textContent = 'An error occurred while contacting the server. Please check the console for details.';
             } finally {
                 buttonElement.innerHTML = originalButtonText;
                 buttonElement.disabled = false;
@@ -244,8 +300,9 @@
 
                 Context: ${projectCivilContext}
             `;
-            callGeminiAPI(prompt, techExplanationResult, explainTechBtn);
+            callBackendAPI(prompt, techExplanationResult, explainTechBtn);
         });
     </script>
 </body>
 </html>
+*/
