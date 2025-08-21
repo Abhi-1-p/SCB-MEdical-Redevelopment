@@ -142,11 +142,11 @@
         </section>
 
         <section class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 class="text-2xl font-bold text-[#073B4C] mb-6 text-center">✨ AI-Powered Risk Analysis</h2>
-            <p class="text-lg text-gray-600 mb-6 text-center max-w-3xl mx-auto">Click the button below to use the Gemini API to generate a detailed analysis of the project's primary risks based on the data presented in this infographic.</p>
+            <h2 class="text-2xl font-bold text-[#073B4C] mb-6 text-center">✨ AI-Powered Project Analysis</h2>
+            <p class="text-lg text-gray-600 mb-6 text-center max-w-3xl mx-auto">Click the button below to use the Gemini API to generate a detailed analysis of the project's primary challenges based on the data presented in this infographic.</p>
             <div class="text-center mb-6">
                 <button id="analyzeRisksBtn" class="gemini-btn bg-[#06D6A0] text-[#073B4C] font-bold py-3 px-6 rounded-lg shadow-lg">
-                    Analyze Project Risks
+                    Analyze Project Challenges
                 </button>
             </div>
             <div id="riskAnalysisResult" class="p-4 bg-gray-50 rounded-lg min-h-[100px] text-gray-700">
@@ -195,8 +195,8 @@
         </section>
         
         <section class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 class="text-2xl font-bold text-[#073B4C] mb-6 text-center">✨ Generate Recovery Scenarios</h2>
-            <p class="text-lg text-gray-600 mb-6 text-center max-w-3xl mx-auto">Select a strategic focus and use the Gemini API to generate tailored recovery scenarios for the project. This tool can help brainstorm actionable strategies to get the project back on track.</p>
+            <h2 class="text-2xl font-bold text-[#073B4C] mb-6 text-center">✨ Generate Strategic Scenarios</h2>
+            <p class="text-lg text-gray-600 mb-6 text-center max-w-3xl mx-auto">Select a strategic focus and use the Gemini API to generate tailored action plans for the project. This tool can help brainstorm strategies to move the project forward.</p>
             <div class="flex flex-col md:flex-row justify-center items-center gap-4 mb-6">
                 <select id="recoveryFocus" class="p-3 border border-gray-300 rounded-lg shadow-sm w-full md:w-auto">
                     <option value="Fast-Track Construction">Focus on Fast-Tracking Construction</option>
@@ -210,7 +210,7 @@
             </div>
             <div id="recoveryScenarioResult" class="p-4 bg-gray-50 rounded-lg min-h-[100px] text-gray-700">
                 <div class="flex justify-center items-center h-full">
-                    <p>AI-generated recovery scenario will appear here...</p>
+                    <p>AI-generated strategic scenario will appear here...</p>
                 </div>
             </div>
         </section>
@@ -338,12 +338,12 @@
             Project: SCB Medical College Redevelopment.
             Vision: Transform into an "AIIMS++" facility.
             Budget: ₹4474 Cr.
-            Status: Project in distress.
+            Status: Project faces significant schedule challenges.
             Clinical Package (L&T): 59.6% schedule backlog.
             Residential Package (NCC): 54.04% schedule backlog.
-            Primary Risk Categories: 'Planning & Design' and 'Structural' issues are the root cause of delays.
+            Primary Challenge Categories: 'Planning & Design' and 'Structural' issues are the root cause of delays.
             Quality Issues: 37 unresolved issues, including critical ones like improper pile load tests and uncertified materials.
-            Technology Risk: The 'Smart Hospital' vision is at risk due to MEP finalization delays.
+            Technology Opportunity: The 'Smart Hospital' vision requires careful management due to MEP finalization delays.
         `;
 
         const callGeminiAPI = async (prompt, resultElement, buttonElement) => {
@@ -363,10 +363,16 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                const result = await response.json();
                 
-                // Enhanced error handling
-                console.log("API Response:", result); // Log the full response for debugging
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    console.error("API Error Response:", errorBody);
+                    resultElement.innerHTML = `<strong class="text-red-600">API Error:</strong> Received status ${response.status}. Check the console for more details.`;
+                    return;
+                }
+
+                const result = await response.json();
+                console.log("API Response:", result);
 
                 if (result.candidates && result.candidates.length > 0 &&
                     result.candidates[0].content && result.candidates[0].content.parts &&
@@ -392,11 +398,11 @@
 
         analyzeRisksBtn.addEventListener('click', () => {
             const prompt = `
-                Based on the following project data, provide a concise but detailed risk analysis. 
-                Focus on the cascading effects of the primary risks. Structure your response in three paragraphs:
-                1.  **Foundational Crisis:** Explain how the 'Planning & Design' and 'Structural' issues are the root cause.
-                2.  **Execution Paralysis:** Describe how these foundational issues lead to schedule backlogs and quality control failures.
-                3.  **Strategic Threat:** Analyze the long-term risk to the 'Smart Hospital' vision and overall project goals.
+                Based on the following project data, provide a concise but detailed analysis of project challenges. 
+                Focus on the cascading effects of the primary issues. Structure your response in three paragraphs:
+                1.  **Core Challenges:** Explain how the 'Planning & Design' and 'Structural' issues are the root cause.
+                2.  **Execution Hurdles:** Describe how these core challenges impact the schedule and quality control.
+                3.  **Strategic Considerations:** Analyze the long-term impact on the 'Smart Hospital' vision and overall project goals.
                 
                 Project Data: ${projectDataContext}
             `;
@@ -406,13 +412,13 @@
         generateScenarioBtn.addEventListener('click', () => {
             const selectedFocus = recoveryFocus.value;
             const prompt = `
-                You are a project recovery consultant. Based on the following project data, generate a high-level, actionable recovery scenario.
-                The primary strategic focus for this scenario should be: "${selectedFocus}".
+                You are a project strategy consultant. Based on the following project data, generate a high-level, actionable strategic plan.
+                The primary strategic focus for this plan should be: "${selectedFocus}".
                 
                 Structure your response with the following headings:
                 - **Objective:** (A one-sentence goal based on the chosen focus).
                 - **Key Initiatives:** (3-4 bullet points with specific, actionable steps).
-                - **Potential Trade-offs:** (Briefly mention what might need to be sacrificed to achieve this focus).
+                - **Potential Considerations:** (Briefly mention what might need to be balanced to achieve this focus).
 
                 Project Data: ${projectDataContext}
             `;
